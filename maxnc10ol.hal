@@ -1,0 +1,95 @@
+# HAL config for the MaxNC 10 Open Loop Steppers
+
+# first load the core RT modules that will be needed
+# kinematics
+loadrt trivkins
+
+# motion controller, get name and thread periods from ini file
+loadrt [EMCMOT]EMCMOT base_period_nsec=[EMCMOT]BASE_PERIOD servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[TRAJ]AXES
+
+
+# first load the parport driver
+loadrt probe_parport
+loadrt hal_parport cfg="0x0378"
+
+# stepper module.
+# each axis uses on of 5, 6, or 9
+loadrt stepgen step_type=9,9,9
+
+loadrt pwmgen output_type=0
+
+addf parport.0.read base-thread
+addf stepgen.make-pulses base-thread
+addf pwmgen.make-pulses base-thread
+addf parport.0.write base-thread
+addf parport.0.reset base-thread
+
+addf stepgen.capture-position servo-thread
+addf motion-command-handler servo-thread
+addf motion-controller servo-thread
+addf stepgen.update-freq servo-thread
+addf pwmgen.update servo-thread
+
+#net spindle-cmd <= motion.spindle-speed-out => pwmgen.0.value
+#net spindle-enable <= motion.spindle-on => pwmgen.0.enable
+#net spindle-pwm <= pwmgen.0.pwm
+#setp pwmgen.0.pwm-freq 0.0
+#setp pwmgen.0.scale 1166.66666667
+#setp pwmgen.0.offset -133.333333333
+#net spindle-cw <= motion.spindle-forward
+
+#net probe-in => motion.probe-input
+#net estop-out => parport.0.pin-01-out
+
+# connect position commands from motion module to step generator
+net Xpos-cmd axis.0.motor-pos-cmd => stepgen.0.position-cmd
+net Ypos-cmd axis.1.motor-pos-cmd => stepgen.1.position-cmd
+net Zpos-cmd axis.2.motor-pos-cmd => stepgen.2.position-cmd
+
+# connect position feedback from step generators
+# to motion module
+net Xpos-fb stepgen.0.position-fb => axis.0.motor-pos-fb
+net Ypos-fb stepgen.1.position-fb => axis.1.motor-pos-fb
+net Zpos-fb stepgen.2.position-fb => axis.2.motor-pos-fb
+
+# connect enable signals for step generators
+net Xen axis.0.amp-enable-out => stepgen.0.enable
+net Yen axis.1.amp-enable-out => stepgen.1.enable
+net Zen axis.2.amp-enable-out => stepgen.2.enable
+
+# connect phases to parallel port pins.
+# this is the standard maxnc 10 ol wiring
+net X-phase-A stepgen.0.phase-A => parport.0.pin-06-out
+net X-phase-B stepgen.0.phase-B => parport.0.pin-07-out
+net X-phase-C stepgen.0.phase-C => parport.0.pin-08-out
+net X-phase-D stepgen.0.phase-D => parport.0.pin-09-out
+
+net Y-phase-A stepgen.1.phase-A => parport.0.pin-01-out
+net Y-phase-B stepgen.1.phase-B => parport.0.pin-14-out
+net Y-phase-C stepgen.1.phase-C => parport.0.pin-16-out
+net Y-phase-D stepgen.1.phase-D => parport.0.pin-17-out
+
+net Z-phase-A stepgen.2.phase-A => parport.0.pin-02-out
+net Z-phase-B stepgen.2.phase-B => parport.0.pin-03-out
+net Z-phase-C stepgen.2.phase-C => parport.0.pin-04-out
+net Z-phase-D stepgen.2.phase-D => parport.0.pin-05-out
+
+# set stepgen module scaling - get values from ini file
+setp stepgen.0.position-scale [AXIS_0]SCALE
+setp stepgen.1.position-scale [AXIS_1]SCALE
+setp stepgen.2.position-scale [AXIS_2]SCALE
+
+# set stepgen module accel limits - get values from ini file
+setp stepgen.1.maxaccel [AXIS_1]STEPGEN_MAXACCEL
+setp stepgen.2.maxaccel [AXIS_2]STEPGEN_MAXACCEL
+
+# various other stepgen settings
+setp stepgen.0.steplen    [AXIS_0]STEPGEN_STEPLEN
+setp stepgen.0.maxaccel   [AXIS_0]STEPGEN_MAXACCEL
+
+setp stepgen.1.steplen [AXIS_1]STEPGEN_STEPLEN
+setp stepgen.2.steplen [AXIS_2]STEPGEN_STEPLEN
+
+# create a signal for the estop loopback
+net estop-loop iocontrol.0.user-enable-out iocontrol.0.emc-enable-in
+
