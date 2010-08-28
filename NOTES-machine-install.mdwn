@@ -31,7 +31,15 @@
 6. some random pre-reqs
    apt-get install bc gedit
 
-7. Start playing with emc!
+7. and we need git
+   wget -O- 'http://keyserver.ubuntu.com:11371/pks/lookup?op=get&search=0xA1715D88E1DF1F24' | apt-key add -
+   echo deb http://ppa.launchpad.net/git-core/ppa/ubuntu hardy main > /etc/apt/sources.list.d/ppa-git.list
+   apt-get update
+   apt-get install git-core
+
+
+
+8. Start playing with emc!
 
   a. latency-test
      run for a bit
@@ -39,3 +47,6 @@
      max jitter(1ms):   121505
      max int (25us):    153355
      max jitter(25us):  129050
+
+  b. The MaxNC 10 OL configs
+     git clone http://github.com/directionless/emc2-maxnc10ol.git
